@@ -1,0 +1,11 @@
+--- vendor/tailscale.com/ipn/localapi/disabled_stubs_orig.go	2025-12-18 13:21:41.596000314 +0900
++++ vendor/tailscale.com/ipn/localapi/disabled_stubs.go	2025-12-18 13:21:45.304000316 +0900
+@@ -1,7 +1,7 @@
+ // Copyright (c) Tailscale Inc & AUTHORS
+ // SPDX-License-Identifier: BSD-3-Clause
+ 
+-//go:build ios || android || js
++//go:build ios || js
+ 
+ package localapi
+ 
