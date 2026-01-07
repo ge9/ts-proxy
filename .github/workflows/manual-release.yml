@@ -1,0 +1,90 @@
+name: Manual release
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Commit SHA / branch / existing tag to build from"
+        required: true
+      tag:
+        description: "New tag name (leave empty to use existing tag in ref)"
+        required: false
+
+permissions:
+  contents: write   # tag push + release 作成に必要
+
+jobs:
+  build-release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - name: Decide tag name
+        shell: bash
+        id: vars
+        run: |
+          REF=${{ inputs.ref }}
+          if [ -n "${{ inputs.tag }}" ]; then
+            TAG=${{ inputs.tag }}
+          else
+            if echo "$REF" | grep -Eq '^[0-9a-f]{40}$'; then # length=40, commit hash
+              SHORTREF="$(printf '%s' "$REF" | cut -c1-7)"
+              TAG="commit-${SHORTREF}"
+            else
+              TAG="$REF"
+              echo "CREATE_TAG=no" >> "$GITHUB_OUTPUT"
+            fi
+            if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+              TAG_COMMIT="$(git rev-list -n 1 "$TAG")"
+              REF_COMMIT="$(git rev-parse "$REF")"
+              if [ "$TAG_COMMIT" = "$REF_COMMIT" ]; then
+                echo "CREATE_TAG=no" >> "$GITHUB_OUTPUT"
+              else
+                echo "ERROR: '$TAG' already exists but points to $TAG_COMMIT, not $REF_COMMIT" >&2
+                exit 1
+              fi
+            fi
+          fi
+          echo "TAG=$TAG" >> "$GITHUB_OUTPUT"
+      - name: Build
+        shell: bash
+        run: |
+          make
+      - name: Prepare artifact
+        shell: bash
+        run: |
+          mkdir dist
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp ts-proxy.exe ts-proxy-windows.exe
+          else
+            cp ts-proxy ts-proxy-linux
+          fi
+      - name: Create and push tag
+        if: steps.vars.outputs.CREATE_TAG != 'no'
+        run: |
+          git tag "${{ steps.vars.outputs.TAG }}"
+          git push origin "${{ steps.vars.outputs.TAG }}"
+
+      - name: Checkout tag
+        run: |
+          git checkout "${{ steps.vars.outputs.TAG }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.TAG }}
+          name: Release ${{ steps.vars.outputs.TAG }}
+          draft: false
+          prerelease: false
+          files: |
+            ts-proxy-*
+            

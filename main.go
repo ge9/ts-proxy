@@ -36,6 +36,7 @@ func (s *stringList) Set(value string) error {
 func main() {
 	var (
 		debug       bool
+		ephemeral   bool
 		tcpTimeout  = 1100
 		udpTimeout  = 330
 		tsServer    *tsnet.Server
@@ -52,6 +53,7 @@ func main() {
 	flag.IntVar(&tcpTimeout, "tcp-timeout", tcpTimeout, "TCP timeout in seconds")
 	flag.IntVar(&udpTimeout, "udp-timeout", udpTimeout, "UDP timeout in seconds")
 	flag.BoolVar(&debug, "debug", debug, "enable debug mode")
+	flag.BoolVar(&ephemeral, "ephemeral", ephemeral, "use ephemeral node")
 
 	flag.Var(&tcpRulesRaw, "tcp", "TCP forward rule: 'bind_addr=connect_addr'")
 	flag.Var(&udpRulesRaw, "udp", "UDP forward rule: 'bind_addr=connect_addr'")
@@ -64,9 +66,9 @@ func main() {
 	}
 
 	tsServer = &tsnet.Server{
-		Hostname: hostname,
-		Dir:      tsdir,
-		// Ephemeral: true,
+		Hostname:  hostname,
+		Dir:       tsdir,
+		Ephemeral: ephemeral,
 		Logf: func(format string, args ...any) {
 			if debug {
 				log.Printf(format, args...)
