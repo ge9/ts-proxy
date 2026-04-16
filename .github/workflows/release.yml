@@ -82,8 +82,46 @@ jobs:
           name: binary-termux
           path: "*.tar.gz"
 
+  build-termux-gui:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Build in Termux Container
+        run: |
+          chmod -R 777 ..
+          docker run --rm \
+            --platform linux/arm64 \
+            --privileged \
+            -v $PWD/..:/workspace \
+            -w /workspace/$(basename $PWD) \
+            termux/termux-docker:aarch64 \
+            /entrypoint.sh sh -c "
+              pkg update && pkg upgrade -y -o Dpkg::Options::=--force-confdef && pkg install -y golang make
+              make
+            "
+      - name: Package GUI release
+        run: |
+          mkdir -p release/gui
+          cp ts-proxy release/ts-proxy
+          cp gui/app.py release/gui/
+          cp scripts/install.sh release/install.sh
+          chmod +x release/install.sh release/ts-proxy
+
+          VERSION=${{ github.ref_name }}
+          cd release
+          tar czf ../ts-proxy-gui-${VERSION:-manual}-termux.tar.gz .
+          cd ..
+          ls -lh ts-proxy-gui-*.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binary-termux-gui
+          path: "ts-proxy-gui-*.tar.gz"
+
   release:
-      needs: [build-pc, build-termux]
+      needs: [build-pc, build-termux, build-termux-gui]
       runs-on: ubuntu-latest
       permissions:
         contents: write

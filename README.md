@@ -111,3 +111,89 @@ The latest Tailscale release has a bug ( https://github.com/tailscale/tailscale/
 # TODO
 - HTTP Proxy support
 - SOCKS5 authentication
+
+---
+
+# Android GUI (Web UI)
+
+A web-based control panel for running ts-proxy on Android (Termux), designed to work alongside Clash.
+
+## Why?
+Android only allows one VPN at a time. Clash takes the VPN slot (TUN mode). ts-proxy is a **userspace** Tailscale client that provides a SOCKS5 proxy without needing the VPN slot. Both can run simultaneously.
+
+```
+Clash (TUN VPN) ──→ global proxy
+    │
+    └── rule: 100.64.0.0/10 → socks5://127.0.0.1:1080
+    │
+ts-proxy (Termux) ──→ Tailscale network via SOCKS5
+```
+
+## Install
+
+### 1. Install Termux
+Download from [F-Droid](https://f-droid.org/packages/com.termux/).
+
+### 2. Download release
+Grab `ts-proxy-gui-*-termux.tar.gz` from [Releases](https://github.com/0xKrito/ts-proxy-android/releases).
+
+### 3. Install
+```bash
+cd ~/downloads   # or wherever you saved it
+tar xzf ts-proxy-gui-*-termux.tar.gz
+bash install.sh
+```
+
+### 4. Start
+```bash
+cd ~/ts-proxy-gui && bash start.sh
+```
+
+Open **http://127.0.0.1:8088** in your browser.
+
+## Features
+- **Control**: Start / stop / restart ts-proxy
+- **Config**: Visual editor for all parameters (hostname, SOCKS, port forwarding, etc.)
+- **Logs**: Real-time log stream with auto-refresh
+- **Command preview**: See exactly what command will run
+
+## Clash Configuration
+
+Add ts-proxy as an outbound in your Clash config:
+
+```yaml
+proxies:
+  - name: tailscale
+    type: socks5
+    server: 127.0.0.1
+    port: 1080
+
+rules:
+  - IP-CIDR,100.64.0.0/10,tailscale
+  - IP-CIDR,fd7a:115c:a1e0::/48,tailscale
+  - GEOIP,CN,DIRECT
+  - MATCH,proxy
+```
+
+## Directory Structure
+```
+~/ts-proxy-gui/
+├── ts-proxy          # ts-proxy binary
+├── start.sh          # Start script (with wake lock)
+├── stop.sh           # Stop script
+├── tsnet-data/       # Tailscale credentials
+├── gui/
+│   ├── app.py        # Web GUI server
+│   └── config.json   # Saved config (auto-generated)
+```
+
+## Stop
+```bash
+bash ~/ts-proxy-gui/stop.sh
+```
+
+## Troubleshooting
+- **Can't open GUI?** Make sure you're opening `http://127.0.0.1:8088` from the same device.
+- **Tailscale login link?** Check the Logs tab in the GUI for `https://login.tailscale.com/...` URL.
+- **Termux killed in background?** Run `termux-wake-lock`, or disable battery optimization for Termux in Android settings.
+- **Custom port:** `GUI_PORT=9090 bash start.sh`
