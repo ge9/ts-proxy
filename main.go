@@ -105,7 +105,7 @@ func main() {
 			log.Printf("Invalid UDP rule format: %s", raw)
 			continue
 		}
-		go tsproxy.ForwardUDP(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
+		go tsproxy.ForwardUDPV3(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
 	}
 
 	for _, raw := range fSocksRaw {

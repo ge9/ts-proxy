@@ -1,3 +1,7 @@
+    //to forward http3 udp:
+    TS_DEBUG_MTU=1400 ./ts-proxy  -udp <relay ts ip>:8443=<target ts ip>:8443
+
+
 # ts-proxy
 `ts-proxy` is a userspace Tailscale client that provides TCP/UDP port-forwarding and SOCKS5 proxy with UDP support. Full cone NAT and no UDP-over-TCP for SOCKS5 UDP (as long as Tailscale is not falling back on DERP).
 
