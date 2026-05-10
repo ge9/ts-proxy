@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ge9/ts-proxy/tsproxy"
+	tsproxy "github.com/ge9/ts-proxy"
 	"tailscale.com/tsnet"
 )
 

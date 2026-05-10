@@ -48,6 +48,8 @@ Port forwarding between two local addresses or two Tailscale addresses is also p
 
 For TCP forwarding, using `=TLS=` instead of `=` enables TLS termination. You must enable HTTPS in the Tailscale Admin Console for this to work.
 
+For TCP forwarding, Unix domain sockets are supported on both the bind and connect sides. An address that does not match the `host:port` format is treated as a Unix socket path. On the bind side, the socket file is removed before listening. Unix domain sockets are not supported with `=TLS=`.
+
 ## SOCKS5 serving (`-serve-socks`)
 Serves a SOCKS5 proxy. `bind_addr` can be followed by a comma-separated list of `outaddr_config` entries, which specify outgoing addresses for the SOCKS5 proxy.
 
@@ -73,17 +75,18 @@ tsnet (which is used in ts-proxy) accepts some environment variables relating au
 
 ## SOCKS5 as Exit Node
 
-- on one device
+- on the exit device
   ```
   ts-proxy -hostname pc1 -serve-socks .tshost:1080,tcp4=10.2.0.2,tcp6=[2400::1111]
   ```
   Outgoing addresses are optional.
-- on another device
-  If Tailscale is running on the device, 100.xxx.yyy.zzz:1080 (according to the Tailscale IP of `pc1`) is SOCKS5 proxy port.
-  If not, ts-proxy can be used again to serve SOCKS5 proxy locally.
-  ```
-  ts-proxy -hostname pc2 -fwd-socks localhost:1080=pc1.tshost:1080
-  ```
+- on client devices
+
+  - If Tailscale is running on the device, 100.xxx.yyy.zzz:1080 (according to the Tailscale IP of `pc1`) is the SOCKS5 proxy port. ts-proxy is not needed.
+  - If not, ts-proxy can be used again to serve SOCKS5 proxy locally.
+      ```
+      ts-proxy -hostname pc2 -fwd-socks localhost:1080=pc1.tshost:1080
+      ```
 
 ## Serve HTTP as HTTPS
 ```
@@ -104,9 +107,6 @@ tsnet handles all Tailscale connectivity. https://github.com/txthinking/socks5 w
 Due to https://github.com/golang/go/issues/40569, `net.Interface()` and `net.InterfaceAddrs()` do not work correctly on newer Android versions. This tool uses https://github.com/wlynxg/anet to resolve this issue. In Android, `anet` has to be run/built with `-ldflags "-checklinkname=0"` to avoid this error: `link: github.com/wlynxg/anet: invalid reference to net.zoneCache`.
 
 Additionally, a small patch is applied to enable TLS certificate requests, which are currently disabled in the Tailscale library. This can also be set up by go.work (this is useful when ts-proxy is used as library).
-
-## Can't connect to itself (#18829)
-The latest Tailscale release has a bug ( https://github.com/tailscale/tailscale/issues/18829 ), where tsnet can't connect to itself. It's already fixed but not released. This is fixed in ts-proxy binary release. See GitHub Actions configuration for detail.
 
 # TODO
 - HTTP Proxy support

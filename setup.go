@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/netip"
+	"os"
 	"strings"
 	"time"
 
@@ -154,13 +155,25 @@ func tsDial(tsServer *tsnet.Server, network, addr string) (net.Conn, error) {
 }
 
 func dialAny(tsServer *tsnet.Server, network, addr string) (net.Conn, error) {
+	if isUnixAddr(addr) {
+		return net.Dial("unix", addr)
+	}
 	if isTailscaleIPPortString(addr) {
 		return tsDial(tsServer, network, addr)
 	}
 	return net.Dial(network, addr)
 }
 
+func isUnixAddr(addr string) bool {
+	_, _, err := net.SplitHostPort(addr)
+	return err != nil
+}
+
 func listenTCP(tsServer *tsnet.Server, addr string) (net.Listener, error) {
+	if isUnixAddr(addr) {
+		os.Remove(addr)
+		return net.Listen("unix", addr)
+	}
 	if isTailscaleIPPortString(addr) {
 		return tsServer.Listen("tcp", addr)
 	}
