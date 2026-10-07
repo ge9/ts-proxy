@@ -44,6 +44,9 @@ SOCKS and forward options can be specified multiple times.
 ## Port Forwarding (`-tcp`, `-udp`)
 If addresses (possibly resolved from `.tshost`) are within the Tailscale IP range (`100.64.0.0/10` or `fd7a:115c:a1e0::/64`), they will be bound or connected via Tailscale.
 `bind_addr` accepts a port-only specification (e.g., `:8080`). `connect_addr` accepts a domain specification (e.g., `example.com:80`).
+For `connect_addr` only, if the part before `.tshost` is not a known Tailscale hostname (e.g. `192.168.1.1.tshost:80`),
+it's used literally as the address, but the connection is still forced via Tailscale. This is useful for an address
+only reachable through a Tailscale subnet router.
 Port forwarding between two local addresses or two Tailscale addresses is also possible (though less useful).
 
 For TCP forwarding, using `=TLS=` instead of `=` enables TLS termination. You must enable HTTPS in the Tailscale Admin Console for this to work.
@@ -106,7 +109,7 @@ tsnet handles all Tailscale connectivity. https://github.com/txthinking/socks5 w
 ## Fix for Android (Termux)
 Due to https://github.com/golang/go/issues/40569, `net.Interface()` and `net.InterfaceAddrs()` do not work correctly on newer Android versions. This tool uses https://github.com/wlynxg/anet to resolve this issue. In Android, `anet` has to be run/built with `-ldflags "-checklinkname=0"` to avoid this error: `link: github.com/wlynxg/anet: invalid reference to net.zoneCache`.
 
-Additionally, a small patch is applied to enable TLS certificate requests, which are currently disabled in the Tailscale library. This can also be set up by go.work (this is useful when ts-proxy is used as library).
+Additionally, a small patch is applied to enable TLS certificate requests, which are currently disabled in the Tailscale library. `android-patch/patch.sh` will fix it. The script will work with either go vendor or go.work.
 
 # TODO
 - HTTP Proxy support

@@ -79,6 +79,24 @@ func resolveTshost(tsServer *tsnet.Server, hostname string, addr string) string 
 	return addr
 }
 
+// Like resolveTshost, but for a connect (dial) target rather than a bind address.
+// If the part before ".tshost" is not a known Tailscale peer, it is used literally
+// as the address but connected via Tailscale.
+func resolveTshostConnect(tsServer *tsnet.Server, hostname string, addr string) (resolved string, forced bool) {
+	host, port, _ := net.SplitHostPort(addr)
+	if !strings.HasSuffix(host, ".tshost") {
+		return addr, false
+	}
+	host = host[:len(host)-7]
+	if host == "" {
+		host = hostname
+	}
+	if isTailscaleHost(tsServer, host) {
+		host = resolveTailscaleIPv4(tsServer, host).String()
+	}
+	return net.JoinHostPort(host, port), true
+}
+
 func resolveTailscaleIPv4(s *tsnet.Server, hostname string) netip.Addr {
 	lc, _ := s.LocalClient()
 	status, _ := lc.Status(context.Background())
@@ -153,11 +171,11 @@ func tsDial(tsServer *tsnet.Server, network, addr string) (net.Conn, error) {
 	return tsServer.Dial(ctx, network, addr)
 }
 
-func dialAny(tsServer *tsnet.Server, network, addr string) (net.Conn, error) {
+func dialAny(tsServer *tsnet.Server, network, addr string, forceTS bool) (net.Conn, error) {
 	if isUnixAddr(addr) {
 		return net.Dial("unix", addr)
 	}
-	if isTailscaleIPPortString(addr) {
+	if forceTS || isTailscaleIPPortString(addr) {
 		return tsDial(tsServer, network, addr)
 	}
 	return net.Dial(network, addr)

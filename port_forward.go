@@ -13,7 +13,7 @@ func (t *TsProxy) ForwardTCP(ctx context.Context, bind, connect string, useTLS b
 	var ln net.Listener
 	var err error
 	bind = resolveTshost(t.tsServer, t.tsServer.Hostname, bind)
-	connect = resolveTshost(t.tsServer, t.tsServer.Hostname, connect)
+	connect, forceTS := resolveTshostConnect(t.tsServer, t.tsServer.Hostname, connect)
 	if useTLS {
 		ln, err = t.tsServer.ListenTLS("tcp", bind)
 	} else {
@@ -45,7 +45,7 @@ func (t *TsProxy) ForwardTCP(ctx context.Context, bind, connect string, useTLS b
 		go func(src net.Conn) {
 			defer src.Close()
 			// ターゲットへ接続
-			dst, err := dialAny(t.tsServer, "tcp", connect)
+			dst, err := dialAny(t.tsServer, "tcp", connect, forceTS)
 			if err != nil {
 				log.Printf("[TCP] Dial failed (%s): %v", connect, err)
 				return
@@ -66,7 +66,7 @@ type udpSession struct {
 // Basically AI-generated
 func (t *TsProxy) ForwardUDP(ctx context.Context, bind, connect string) error {
 	bind = resolveTshost(t.tsServer, t.tsServer.Hostname, bind)
-	connect = resolveTshost(t.tsServer, t.tsServer.Hostname, connect)
+	connect, forceTS := resolveTshostConnect(t.tsServer, t.tsServer.Hostname, connect)
 	pc, err := listenUDP(t.tsServer, bind)
 	if err != nil {
 		return err
@@ -120,7 +120,7 @@ func (t *TsProxy) ForwardUDP(ctx context.Context, bind, connect string) error {
 				session.lastActive = now
 				session.conn.Write(buf[:n])
 			} else {
-				dstConn, err := dialAny(t.tsServer, "udp", connect)
+				dstConn, err := dialAny(t.tsServer, "udp", connect, forceTS)
 				if err != nil && t.debug {
 					log.Printf("[UDP] Dial failed: %v", err)
 				} else {
