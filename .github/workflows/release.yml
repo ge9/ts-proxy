@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  VERSION: ${{ github.event.release.tag_name || format('dev-{0}', github.run_number) }}
+
 jobs:
   build-pc:
     runs-on: ${{ matrix.os }}
@@ -23,14 +26,17 @@ jobs:
       - name: Build
         shell: bash
         run: |
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            export CGO_ENABLED=0
+          fi
           make
       - name: Archive (tar.gz)
         shell: bash
         run: |
           if [ "${{ runner.os }}" == "Windows" ]; then
-            pwsh -Command Compress-Archive -Path ts-proxy.exe -DestinationPath ts-proxy-${{ github.ref_name }}-windows.zip
+            pwsh -Command Compress-Archive -Path ts-proxy.exe -DestinationPath ts-proxy-${{ env.VERSION }}-windows.zip
           else
-            tar -cvzf ts-proxy-${{ github.ref_name }}-${{ matrix.os }}.tar.gz ts-proxy
+            tar -cvzf ts-proxy-${{ env.VERSION }}-${{ matrix.os }}.tar.gz ts-proxy
           fi
       - uses: actions/upload-artifact@v4
         with:
@@ -49,7 +55,7 @@ jobs:
           export GOARCH=amd64
           make
       - name: Archive (tar.gz)
-        run: tar -cvzf ts-proxy-${{ github.ref_name }}-freebsd.tar.gz ts-proxy
+        run: tar -cvzf ts-proxy-${{ env.VERSION }}-freebsd.tar.gz ts-proxy
       - uses: actions/upload-artifact@v4
         with:
           name: binary-freebsd
@@ -72,18 +78,19 @@ jobs:
             -w /workspace/$(basename $PWD) \
             termux/termux-docker:aarch64 \
             /entrypoint.sh sh -c "
-              pkg update && pkg upgrade -y -o Dpkg::Options::=--force-confdef && pkg install -y golang make
-              make
+              pkg update && pkg upgrade -y -o Dpkg::Options::=--force-confdef && pkg install -y golang clang make
+              CGO_ENABLED=1 make
             "
       - name: Archive (tar.gz)
-        run: tar -cvzf ts-proxy-${{ github.ref_name }}-aa64termux.tar.gz ts-proxy
+        run: tar -cvzf ts-proxy-${{ env.VERSION }}-aa64termux.tar.gz ts-proxy
       - uses: actions/upload-artifact@v4
         with:
           name: binary-termux
           path: "*.tar.gz"
 
   release:
-      needs: [build-pc, build-termux]
+      needs: [build-pc, build-freebsd, build-termux]
+      if: github.event_name == 'release'
       runs-on: ubuntu-latest
       permissions:
         contents: write

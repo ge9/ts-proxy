@@ -1,5 +1,6 @@
-TS_DIR=$(go list -m -f '{{.Dir}}' tailscale.com | grep -v "pkg/mod")
 MY_DIR=$(cd $(dirname $0);pwd)
+cd $(dirname $MY_DIR)
+TS_DIR=$(go list -m -f '{{.Dir}}' tailscale.com | grep -v "pkg/mod")
 if [ -z "$TS_DIR" ]; then
   go mod vendor
   TS_DIR=vendor/tailscale.com
